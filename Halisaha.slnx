@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Halisaha.Api/Halisaha.Api.csproj" />
+    <Project Path="src/Halisaha.Application/Halisaha.Application.csproj" />
+    <Project Path="src/Halisaha.Domain/Halisaha.Domain.csproj" />
+    <Project Path="src/Halisaha.Infrastructure/Halisaha.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Halisaha.Domain.Tests/Halisaha.Domain.Tests.csproj" />
+  </Folder>
+</Solution>

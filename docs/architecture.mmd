@@ -1,0 +1,23 @@
+flowchart LR
+    subgraph Clients
+        WEB["Blazor Web App"]
+        MOB["Mobile (v2)<br/>.NET MAUI Blazor Hybrid"]
+    end
+    subgraph Backend["ASP.NET Core Web API (.NET 10)"]
+        API["Api<br/>Controllers, JWT auth,<br/>ProblemDetails, Scalar"]
+        APP["Application<br/>Use cases, DTOs,<br/>FluentValidation, AutoMapper"]
+        DOM["Domain<br/>Entities, enums,<br/>business rules"]
+        INF["Infrastructure<br/>EF Core + Npgsql,<br/>Identity, JWT, seed"]
+    end
+    DB[("PostgreSQL")]
+    LLM["LLM API (January)<br/>listing parsing,<br/>player recommendation"]
+
+    WEB -->|HTTPS + JWT| API
+    MOB -.->|same API| API
+    API --> APP
+    APP --> DOM
+    INF --> APP
+    INF --> DOM
+    API --> INF
+    INF --> DB
+    INF -.-> LLM

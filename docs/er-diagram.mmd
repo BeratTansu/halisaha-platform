@@ -1,0 +1,85 @@
+erDiagram
+    USER ||--o| PLAYER_PROFILE : "has"
+    PROVINCE ||--|{ DISTRICT : "contains"
+    DISTRICT ||--o{ VENUE : "located in"
+    DISTRICT ||--o{ PLAYER_PROFILE : "preferred district"
+    VENUE ||--o{ MATCH : "hosts"
+    PLAYER_PROFILE ||--o{ MATCH : "organizes"
+    MATCH ||--o{ MATCH_REQUEST : "has"
+    PLAYER_PROFILE ||--o{ MATCH_REQUEST : "sends / receives"
+    MATCH ||--o{ MATCH_PARTICIPATION : "roster"
+    PLAYER_PROFILE ||--o{ MATCH_PARTICIPATION : "plays in"
+    MATCH ||--o{ RATING : "rated in"
+    PLAYER_PROFILE ||--o{ RATING : "gives / receives"
+
+    USER {
+        uuid Id PK
+        string FirstName
+        string LastName
+        string Email UK
+        string PhoneNumber
+        string PasswordHash
+        timestamptz CreatedAt
+    }
+    PLAYER_PROFILE {
+        uuid UserId PK, FK
+        enum PreferredPosition "Goalkeeper|Defender|Midfielder|Forward"
+        int SkillLevel "1-5, self-declared"
+        int PreferredDistrictId FK
+    }
+    PROVINCE {
+        int Id PK
+        string Name UK
+    }
+    DISTRICT {
+        int Id PK
+        int ProvinceId FK
+        string Name "UK with ProvinceId"
+    }
+    VENUE {
+        int Id PK
+        string Name
+        string Address
+        double Latitude
+        double Longitude
+        int DistrictId FK
+        bool IsActive
+    }
+    MATCH {
+        uuid Id PK
+        int VenueId FK
+        uuid OrganizerUserId FK
+        enum MatchType "Mixed|WithOpponent"
+        timestamptz StartsAt
+        int Capacity
+        int ExternalPlayerCount
+        enum Status "Open|Completed|Cancelled"
+        string Description "original text, AI input"
+        timestamptz CompletedAt
+        timestamptz CreatedAt
+    }
+    MATCH_REQUEST {
+        uuid Id PK
+        uuid MatchId FK
+        uuid PlayerId FK
+        enum Type "Application|Invitation"
+        enum Status "Pending|Accepted|Rejected|Withdrawn"
+        timestamptz CreatedAt
+        timestamptz RespondedAt
+    }
+    MATCH_PARTICIPATION {
+        uuid Id PK
+        uuid MatchId FK "UK with PlayerId"
+        uuid PlayerId FK
+        enum Team "A|B|null"
+        enum Attendance "NotRecorded|Present|Absent"
+        timestamptz JoinedAt
+    }
+    RATING {
+        uuid Id PK
+        uuid MatchId FK "UK with Rater+Ratee"
+        uuid RaterId FK
+        uuid RateeId FK
+        int Score "1-5"
+        timestamptz CreatedAt
+    }
