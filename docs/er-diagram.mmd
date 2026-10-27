@@ -56,6 +56,7 @@ erDiagram
         enum Status "Open|Completed|Cancelled"
         string Description "original text, AI input"
         timestamptz CompletedAt
+	timestamptz CancelledAt
         timestamptz CreatedAt
     }
     MATCH_REQUEST {
