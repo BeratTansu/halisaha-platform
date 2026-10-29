@@ -17,4 +17,6 @@ public static class MatchRules
 
     public const int MinScore = 1;
     public const int MaxScore = 5;
+    public const int MinSkillLevel = 1;
+    public const int MaxSkillLevel = 5;
 }
