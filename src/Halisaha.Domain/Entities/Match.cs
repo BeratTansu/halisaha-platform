@@ -33,6 +33,51 @@ public class Match
     public bool IsParticipant(Guid playerId) => _participations.Any(p => p.PlayerId == playerId);
     public MatchParticipation? ParticipationOf(Guid playerId) => _participations.FirstOrDefault(p => p.PlayerId == playerId);
 
+    internal void EnsureOpenForJoining(DateTime now)
+    {
+        if (Status != MatchStatus.Open)
+        {
+            throw DomainException.Conflict("match.not_open", "The match is not open.");
+        }
+
+        if (HasStarted(now))
+        {
+            throw DomainException.Conflict("match.started", "The match has already started.");
+        }
+    }
+
+    internal void AddParticipant(Guid playerId, DateTime now)
+    {
+        EnsureOpenForJoining(now);
+
+        if (IsParticipant(playerId))
+        {
+            throw DomainException.Conflict("match.already_participant", "The player is already in the match.");
+        }
+
+        if (IsFull)
+        {
+            throw DomainException.Conflict("match.full", "The match is full.");
+        }
+
+        _participations.Add(new MatchParticipation(Id, playerId, now));
+    }
+
+    public void Withdraw(Guid playerId, DateTime now)
+    {
+        if (IsOrganizer(playerId))
+        {
+            throw DomainException.Conflict("match.organizer_cannot_withdraw", "The organizer cannot leave the match; cancel it instead.");
+        }
+
+        var participation = ParticipationOf(playerId)
+            ?? throw DomainException.Conflict("match.not_participant", "The player is not in the match.");
+
+        EnsureOpenForJoining(now);
+
+        _participations.Remove(participation);
+    }
+
     public static Match Create(Guid organizerUserId, int venueId, MatchType type, DateTime startsAt, int capacity, int externalPlayerCount,
         string? description, DateTime now)
     {
