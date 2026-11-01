@@ -93,4 +93,15 @@ public class MatchRosterTests
         Assert.Equal("match.started", ex.Code);
         Assert.True(match.IsParticipant(Mert));
     }
+
+    [Fact]
+    public void AddParticipant_WithEmptyPlayer_Throws()
+    {
+        var match = TestData.OpenMatch();
+
+        var ex = Assert.Throws<DomainException>(
+            () => match.AddParticipant(Guid.Empty, TestData.Now));
+
+        Assert.Equal("match.player_required", ex.Code);
+    }
 }
