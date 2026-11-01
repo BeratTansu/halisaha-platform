@@ -48,6 +48,11 @@ public class Match
 
     internal void AddParticipant(Guid playerId, DateTimeOffset now)
     {
+        if (playerId == Guid.Empty)
+        {
+            throw DomainException.Validation("match.player_required", "Player is required.");
+        }
+
         EnsureOpenForJoining(now);
 
         if (IsParticipant(playerId))
@@ -81,6 +86,11 @@ public class Match
     public static Match Create(Guid organizerUserId, int venueId, MatchType type, DateTimeOffset startsAt, int capacity, int externalPlayerCount,
         string? description, DateTimeOffset now)
     {
+        if (organizerUserId == Guid.Empty)
+        {
+            throw DomainException.Validation("match.organizer_required", "Organizer is required.");
+        }
+
         if (now >= startsAt)
         {
             throw DomainException.Validation("match.start_in_past", "Match must start in the future.");
