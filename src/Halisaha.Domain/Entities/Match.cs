@@ -33,7 +33,7 @@ public class Match
     public bool IsParticipant(Guid playerId) => _participations.Any(p => p.PlayerId == playerId);
     public MatchParticipation? ParticipationOf(Guid playerId) => _participations.FirstOrDefault(p => p.PlayerId == playerId);
 
-    internal void EnsureOpenForJoining(DateTimeOffset now)
+    internal void EnsureOpenAndNotStarted(DateTimeOffset now)
     {
         if (Status != MatchStatus.Open)
         {
@@ -53,7 +53,7 @@ public class Match
             throw DomainException.Validation("match.player_required", "Player is required.");
         }
 
-        EnsureOpenForJoining(now);
+        EnsureOpenAndNotStarted(now);
 
         if (IsParticipant(playerId))
         {
@@ -78,29 +78,55 @@ public class Match
         var participation = ParticipationOf(playerId)
             ?? throw DomainException.Conflict("match.not_participant", "The player is not in the match.");
 
-        EnsureOpenForJoining(now);
+        EnsureOpenAndNotStarted(now);
 
         _participations.Remove(participation);
     }
 
-    // ---------- TODO (Berat): implement these five members, then rename EnsureOpenForJoining ----------
-    // The tests in MatchLifecycleTests and MatchAttendanceTests describe exactly what they must do.
+    public bool IsWithoutResult(DateTimeOffset now)
+    {
+        return Status == MatchStatus.Open
+            && now > StartsAt + MatchRules.CompletionWindow;
+    }
 
-    /// <summary>Open, kick-off passed and the 7-day completion window is over: nobody can complete it any more.</summary>
-    public bool IsWithoutResult(DateTimeOffset now) => throw new NotImplementedException();
+    public bool IsAttendanceOpen(DateTimeOffset now)
+    {
+        return Status == MatchStatus.Completed
+            && CompletedAt.HasValue
+            && now >= CompletedAt.Value
+            && now <= CompletedAt.Value + MatchRules.AttendanceWindow;
+    }
 
-    /// <summary>Completed, and now is between CompletedAt and CompletedAt + AttendanceWindow (both ends included).</summary>
-    public bool IsAttendanceOpen(DateTimeOffset now) => throw new NotImplementedException();
+    public bool IsRatingOpen(DateTimeOffset now)
+    {
+        return Status == MatchStatus.Completed
+            && CompletedAt.HasValue
+            && now >= CompletedAt.Value
+            && now <= CompletedAt.Value + MatchRules.RatingWindow;
+    }
 
-    /// <summary>Completed, and now is between CompletedAt and CompletedAt + RatingWindow (both ends included).</summary>
-    public bool IsRatingOpen(DateTimeOffset now) => throw new NotImplementedException();
-
-    /// <summary>Organizer only, before kick-off; capacity rules apply with the current roster.</summary>
     public void UpdateCapacity(Guid actorId, int capacity, int externalPlayerCount, DateTimeOffset now)
-        => throw new NotImplementedException();
+    {
+        EnsureOrganizer(actorId);
 
-    /// <summary>Organizer only, before kick-off. Sets Status and CancelledAt.</summary>
-    public void Cancel(Guid actorId, DateTimeOffset now) => throw new NotImplementedException();
+        EnsureOpenAndNotStarted(now);
+
+        ValidateCapacity(Type, capacity, externalPlayerCount, rosterCount: _participations.Count);
+
+        Capacity = capacity;
+        ExternalPlayerCount = externalPlayerCount;
+    }
+
+    public void Cancel(Guid actorId, DateTimeOffset now)
+    {
+        EnsureOrganizer(actorId);
+
+        EnsureOpenAndNotStarted(now);
+
+        Status = MatchStatus.Cancelled;
+
+        CancelledAt = now;
+    }
 
     public void Complete(Guid actorId, DateTimeOffset now)
     {
@@ -127,7 +153,8 @@ public class Match
 
         Status = MatchStatus.Completed;
         CompletedAt = now;
-        organizer.SetAttendance(Attendance.Present); // completing the match declares the organizer's own attendance
+        organizer.SetAttendance(Attendance.Present);
+        // Completing the match declares the organizer's own attendance.
     }
 
     public void RecordAttendance(Guid actorId, Guid playerId, Attendance attendance, DateTimeOffset now)
@@ -177,8 +204,15 @@ public class Match
         }
     }
 
-    public static Match Create(Guid organizerUserId, int venueId, MatchType type, DateTimeOffset startsAt, int capacity, int externalPlayerCount,
-        string? description, DateTimeOffset now)
+    public static Match Create(
+        Guid organizerUserId,
+        int venueId,
+        MatchType type,
+        DateTimeOffset startsAt,
+        int capacity,
+        int externalPlayerCount,
+        string? description,
+        DateTimeOffset now)
     {
         if (organizerUserId == Guid.Empty)
         {
@@ -211,7 +245,11 @@ public class Match
         return match;
     }
 
-    private static void ValidateCapacity(MatchType type, int capacity, int externalPlayerCount, int rosterCount)
+    private static void ValidateCapacity(
+        MatchType type,
+        int capacity,
+        int externalPlayerCount,
+        int rosterCount)
     {
         if (!Enum.IsDefined(type))
         {
@@ -226,17 +264,16 @@ public class Match
         if (type == MatchType.Mixed && capacity % 2 != 0)
         {
             throw DomainException.Validation("match.mixed_capacity_odd", "Mixed match capacity must be even.");
-        } 
+        }
 
         if (externalPlayerCount < 0)
         {
             throw DomainException.Validation("match.invalid_external_count", "External player count cannot be negative.");
         }
 
-        if (capacity < (externalPlayerCount + rosterCount))
+        if (externalPlayerCount > capacity - rosterCount)
         {
             throw DomainException.Conflict("match.capacity_exceeded", "Capacity cannot be less than the players already in the match.");
         }
     }
 }
-

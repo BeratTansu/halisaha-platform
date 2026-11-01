@@ -97,6 +97,23 @@ public class MatchLifecycleTests
         Assert.Equal(14, match.Capacity);
     }
 
+    [Fact]
+    public void UpdateCapacity_WithIntMaxExternalPlayerCount_ThrowsConflictAndKeepsValues()
+    {
+        var match = TestData.OpenMatch(capacity: 14, externalPlayerCount: 2);
+
+        var ex = Assert.Throws<DomainException>(
+            () => match.UpdateCapacity(
+                TestData.Organizer,
+                14,
+                int.MaxValue,
+                TestData.Now));
+
+        Assert.Equal("match.capacity_exceeded", ex.Code);
+        Assert.Equal(14, match.Capacity);
+        Assert.Equal(2, match.ExternalPlayerCount);
+    }
+
     // ---------- Cancel ----------
 
     [Fact]
