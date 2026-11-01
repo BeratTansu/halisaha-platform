@@ -9,11 +9,11 @@ public class MatchParticipation
     public Guid PlayerId { get; private set; }
     public Team? Team { get; private set; }
     public Attendance Attendance { get; private set; }
-    public DateTime JoinedAt { get; private set; }
+    public DateTimeOffset JoinedAt { get; private set; }
 
     private MatchParticipation() { } // EF Core
 
-    internal MatchParticipation(Guid matchId, Guid playerId, DateTime now)
+    internal MatchParticipation(Guid matchId, Guid playerId, DateTimeOffset now)
     {
         Id = Guid.NewGuid();
         MatchId = matchId;

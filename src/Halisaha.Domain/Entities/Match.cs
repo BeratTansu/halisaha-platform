@@ -15,25 +15,25 @@ public class Match
     public Venue? Venue { get; private set; }
     public Guid OrganizerUserId { get; private set; }
     public MatchType Type { get; private set; }
-    public DateTime StartsAt { get; private set; }
+    public DateTimeOffset StartsAt { get; private set; }
     public int Capacity { get; private set; }
     public int ExternalPlayerCount { get; private set; }
     public MatchStatus Status { get; private set; }
     public string? Description { get; private set; }
-    public DateTime? CompletedAt { get; private set; }
-    public DateTime? CancelledAt { get; private set; }
-    public DateTime CreatedAt { get; private set; }
+    public DateTimeOffset? CompletedAt { get; private set; }
+    public DateTimeOffset? CancelledAt { get; private set; }
+    public DateTimeOffset CreatedAt { get; private set; }
 
     private Match() { } // EF Core
 
     public int MissingPlayers => Capacity - (ExternalPlayerCount + _participations.Count);
     public bool IsFull => MissingPlayers <= 0;
-    public bool HasStarted(DateTime now) => now >= StartsAt;
+    public bool HasStarted(DateTimeOffset now) => now >= StartsAt;
     public bool IsOrganizer(Guid userId) => OrganizerUserId == userId;
     public bool IsParticipant(Guid playerId) => _participations.Any(p => p.PlayerId == playerId);
     public MatchParticipation? ParticipationOf(Guid playerId) => _participations.FirstOrDefault(p => p.PlayerId == playerId);
 
-    internal void EnsureOpenForJoining(DateTime now)
+    internal void EnsureOpenForJoining(DateTimeOffset now)
     {
         if (Status != MatchStatus.Open)
         {
@@ -46,8 +46,13 @@ public class Match
         }
     }
 
-    internal void AddParticipant(Guid playerId, DateTime now)
+    internal void AddParticipant(Guid playerId, DateTimeOffset now)
     {
+        if (playerId == Guid.Empty)
+        {
+            throw DomainException.Validation("match.player_required", "Player is required.");
+        }
+
         EnsureOpenForJoining(now);
 
         if (IsParticipant(playerId))
@@ -63,7 +68,7 @@ public class Match
         _participations.Add(new MatchParticipation(Id, playerId, now));
     }
 
-    public void Withdraw(Guid playerId, DateTime now)
+    public void Withdraw(Guid playerId, DateTimeOffset now)
     {
         if (IsOrganizer(playerId))
         {
@@ -78,9 +83,14 @@ public class Match
         _participations.Remove(participation);
     }
 
-    public static Match Create(Guid organizerUserId, int venueId, MatchType type, DateTime startsAt, int capacity, int externalPlayerCount,
-        string? description, DateTime now)
+    public static Match Create(Guid organizerUserId, int venueId, MatchType type, DateTimeOffset startsAt, int capacity, int externalPlayerCount,
+        string? description, DateTimeOffset now)
     {
+        if (organizerUserId == Guid.Empty)
+        {
+            throw DomainException.Validation("match.organizer_required", "Organizer is required.");
+        }
+
         if (now >= startsAt)
         {
             throw DomainException.Validation("match.start_in_past", "Match must start in the future.");

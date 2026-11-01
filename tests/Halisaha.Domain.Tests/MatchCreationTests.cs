@@ -104,4 +104,21 @@ public class MatchCreationTests
         Assert.Equal("match.capacity_exceeded", ex.Code);
         Assert.Equal(DomainErrorKind.Conflict, ex.Kind);
     }
+
+    [Fact]
+    public void Create_WithEmptyOrganizer_Throws()
+    {
+        var ex = Assert.Throws<DomainException>(() =>
+            Match.Create(
+                Guid.Empty,
+                1,
+                MatchType.Mixed,
+                TestData.StartsAt,
+                14,
+                0,
+                null,
+                TestData.Now));
+
+        Assert.Equal("match.organizer_required", ex.Code);
+    }
 }

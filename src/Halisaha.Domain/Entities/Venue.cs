@@ -27,7 +27,7 @@ public class Venue
         if (string.IsNullOrWhiteSpace(name))
             throw DomainException.Validation("venue.name_required", "Venue name is required.");
 
-        if (latitude is < -90 or > 90 || longitude is < -180 or > 180)
+        if (!double.IsFinite(latitude) || !double.IsFinite(longitude) || latitude is < -90 or > 90 || longitude is < -180 or > 180)
             throw DomainException.Validation("venue.invalid_coordinates", "Coordinates are out of range.");
 
         Name = name.Trim();
