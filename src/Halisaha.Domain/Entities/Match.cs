@@ -33,7 +33,7 @@ public class Match
     public bool IsParticipant(Guid playerId) => _participations.Any(p => p.PlayerId == playerId);
     public MatchParticipation? ParticipationOf(Guid playerId) => _participations.FirstOrDefault(p => p.PlayerId == playerId);
 
-    internal void EnsureOpenForJoining(DateTimeOffset now)
+    internal void EnsureOpenAndNotStarted(DateTimeOffset now)
     {
         if (Status != MatchStatus.Open)
         {
@@ -53,7 +53,7 @@ public class Match
             throw DomainException.Validation("match.player_required", "Player is required.");
         }
 
-        EnsureOpenForJoining(now);
+        EnsureOpenAndNotStarted(now);
 
         if (IsParticipant(playerId))
         {
@@ -78,13 +78,141 @@ public class Match
         var participation = ParticipationOf(playerId)
             ?? throw DomainException.Conflict("match.not_participant", "The player is not in the match.");
 
-        EnsureOpenForJoining(now);
+        EnsureOpenAndNotStarted(now);
 
         _participations.Remove(participation);
     }
 
-    public static Match Create(Guid organizerUserId, int venueId, MatchType type, DateTimeOffset startsAt, int capacity, int externalPlayerCount,
-        string? description, DateTimeOffset now)
+    public bool IsWithoutResult(DateTimeOffset now)
+    {
+        return Status == MatchStatus.Open
+            && now > StartsAt + MatchRules.CompletionWindow;
+    }
+
+    public bool IsAttendanceOpen(DateTimeOffset now)
+    {
+        return Status == MatchStatus.Completed
+            && CompletedAt.HasValue
+            && now >= CompletedAt.Value
+            && now <= CompletedAt.Value + MatchRules.AttendanceWindow;
+    }
+
+    public bool IsRatingOpen(DateTimeOffset now)
+    {
+        return Status == MatchStatus.Completed
+            && CompletedAt.HasValue
+            && now >= CompletedAt.Value
+            && now <= CompletedAt.Value + MatchRules.RatingWindow;
+    }
+
+    public void UpdateCapacity(Guid actorId, int capacity, int externalPlayerCount, DateTimeOffset now)
+    {
+        EnsureOrganizer(actorId);
+
+        EnsureOpenAndNotStarted(now);
+
+        ValidateCapacity(Type, capacity, externalPlayerCount, rosterCount: _participations.Count);
+
+        Capacity = capacity;
+        ExternalPlayerCount = externalPlayerCount;
+    }
+
+    public void Cancel(Guid actorId, DateTimeOffset now)
+    {
+        EnsureOrganizer(actorId);
+
+        EnsureOpenAndNotStarted(now);
+
+        Status = MatchStatus.Cancelled;
+
+        CancelledAt = now;
+    }
+
+    public void Complete(Guid actorId, DateTimeOffset now)
+    {
+        EnsureOrganizer(actorId);
+
+        if (Status != MatchStatus.Open)
+        {
+            throw DomainException.Conflict("match.not_open", "The match is not open.");
+        }
+
+        if (now < StartsAt)
+        {
+            throw DomainException.Conflict("match.not_started", "The match has not started yet.");
+        }
+
+        if (now > StartsAt + MatchRules.CompletionWindow)
+        {
+            throw DomainException.Conflict("match.completion_window_closed", "The completion window for this match has closed.");
+        }
+
+        // Look the organizer up before changing anything, so a broken invariant can't leave the match half-completed.
+        var organizer = ParticipationOf(OrganizerUserId)
+            ?? throw new InvalidOperationException($"Match {Id} has no participation for its organizer.");
+
+        Status = MatchStatus.Completed;
+        CompletedAt = now;
+        organizer.SetAttendance(Attendance.Present);
+        // Completing the match declares the organizer's own attendance.
+    }
+
+    public void RecordAttendance(Guid actorId, Guid playerId, Attendance attendance, DateTimeOffset now)
+    {
+        // Shape
+        if (playerId == Guid.Empty)
+        {
+            throw DomainException.Validation("match.player_required", "Player is required.");
+        }
+
+        if (attendance is not (Attendance.Present or Attendance.Absent))
+        {
+            throw DomainException.Validation("attendance.invalid_value", "Attendance must be Present or Absent.");
+        }
+
+        // Who
+        EnsureOrganizer(actorId);
+
+        // When
+        if (Status != MatchStatus.Completed)
+        {
+            throw DomainException.Conflict("attendance.match_not_completed", "Attendance can only be recorded for a completed match.");
+        }
+
+        if (!IsAttendanceOpen(now))
+        {
+            throw DomainException.Conflict("attendance.window_closed", "The attendance window for this match has closed.");
+        }
+
+        // What
+        if (IsOrganizer(playerId))
+        {
+            throw DomainException.Validation("attendance.cannot_record_organizer", "The organizer's attendance is set when the match is completed.");
+        }
+
+        var participation = ParticipationOf(playerId)
+            ?? throw DomainException.Conflict("match.not_participant", "The player is not in the match.");
+
+        participation.SetAttendance(attendance);
+    }
+
+    private void EnsureOrganizer(Guid actorId)
+    {
+        if (!IsOrganizer(actorId))
+        {
+            throw DomainException.Forbidden("match.not_organizer", "Only the organizer can do this.");
+        }
+    }
+
+    public static Match Create(
+        Guid organizerUserId,
+        int venueId,
+        MatchType type,
+        DateTimeOffset startsAt,
+        int capacity,
+        int externalPlayerCount,
+        string? description,
+        DateTimeOffset now)
     {
         if (organizerUserId == Guid.Empty)
         {
@@ -117,7 +245,11 @@ public class Match
         return match;
     }
 
-    private static void ValidateCapacity(MatchType type, int capacity, int externalPlayerCount, int rosterCount)
+    private static void ValidateCapacity(
+        MatchType type,
+        int capacity,
+        int externalPlayerCount,
+        int rosterCount)
     {
         if (!Enum.IsDefined(type))
         {
@@ -132,17 +264,16 @@ public class Match
         if (type == MatchType.Mixed && capacity % 2 != 0)
         {
             throw DomainException.Validation("match.mixed_capacity_odd", "Mixed match capacity must be even.");
-        } 
+        }
 
         if (externalPlayerCount < 0)
         {
             throw DomainException.Validation("match.invalid_external_count", "External player count cannot be negative.");
         }
 
-        if (capacity < (externalPlayerCount + rosterCount))
+        if (externalPlayerCount > capacity - rosterCount)
         {
             throw DomainException.Conflict("match.capacity_exceeded", "Capacity cannot be less than the players already in the match.");
         }
     }
 }
-
