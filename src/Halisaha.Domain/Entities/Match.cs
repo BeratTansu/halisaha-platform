@@ -83,6 +83,100 @@ public class Match
         _participations.Remove(participation);
     }
 
+    // ---------- TODO (Berat): implement these five members, then rename EnsureOpenForJoining ----------
+    // The tests in MatchLifecycleTests and MatchAttendanceTests describe exactly what they must do.
+
+    /// <summary>Open, kick-off passed and the 7-day completion window is over: nobody can complete it any more.</summary>
+    public bool IsWithoutResult(DateTimeOffset now) => throw new NotImplementedException();
+
+    /// <summary>Completed, and now is between CompletedAt and CompletedAt + AttendanceWindow (both ends included).</summary>
+    public bool IsAttendanceOpen(DateTimeOffset now) => throw new NotImplementedException();
+
+    /// <summary>Completed, and now is between CompletedAt and CompletedAt + RatingWindow (both ends included).</summary>
+    public bool IsRatingOpen(DateTimeOffset now) => throw new NotImplementedException();
+
+    /// <summary>Organizer only, before kick-off; capacity rules apply with the current roster.</summary>
+    public void UpdateCapacity(Guid actorId, int capacity, int externalPlayerCount, DateTimeOffset now)
+        => throw new NotImplementedException();
+
+    /// <summary>Organizer only, before kick-off. Sets Status and CancelledAt.</summary>
+    public void Cancel(Guid actorId, DateTimeOffset now) => throw new NotImplementedException();
+
+    public void Complete(Guid actorId, DateTimeOffset now)
+    {
+        EnsureOrganizer(actorId);
+
+        if (Status != MatchStatus.Open)
+        {
+            throw DomainException.Conflict("match.not_open", "The match is not open.");
+        }
+
+        if (now < StartsAt)
+        {
+            throw DomainException.Conflict("match.not_started", "The match has not started yet.");
+        }
+
+        if (now > StartsAt + MatchRules.CompletionWindow)
+        {
+            throw DomainException.Conflict("match.completion_window_closed", "The completion window for this match has closed.");
+        }
+
+        // Look the organizer up before changing anything, so a broken invariant can't leave the match half-completed.
+        var organizer = ParticipationOf(OrganizerUserId)
+            ?? throw new InvalidOperationException($"Match {Id} has no participation for its organizer.");
+
+        Status = MatchStatus.Completed;
+        CompletedAt = now;
+        organizer.SetAttendance(Attendance.Present); // completing the match declares the organizer's own attendance
+    }
+
+    public void RecordAttendance(Guid actorId, Guid playerId, Attendance attendance, DateTimeOffset now)
+    {
+        // Shape
+        if (playerId == Guid.Empty)
+        {
+            throw DomainException.Validation("match.player_required", "Player is required.");
+        }
+
+        if (attendance is not (Attendance.Present or Attendance.Absent))
+        {
+            throw DomainException.Validation("attendance.invalid_value", "Attendance must be Present or Absent.");
+        }
+
+        // Who
+        EnsureOrganizer(actorId);
+
+        // When
+        if (Status != MatchStatus.Completed)
+        {
+            throw DomainException.Conflict("attendance.match_not_completed", "Attendance can only be recorded for a completed match.");
+        }
+
+        if (!IsAttendanceOpen(now))
+        {
+            throw DomainException.Conflict("attendance.window_closed", "The attendance window for this match has closed.");
+        }
+
+        // What
+        if (IsOrganizer(playerId))
+        {
+            throw DomainException.Validation("attendance.cannot_record_organizer", "The organizer's attendance is set when the match is completed.");
+        }
+
+        var participation = ParticipationOf(playerId)
+            ?? throw DomainException.Conflict("match.not_participant", "The player is not in the match.");
+
+        participation.SetAttendance(attendance);
+    }
+
+    private void EnsureOrganizer(Guid actorId)
+    {
+        if (!IsOrganizer(actorId))
+        {
+            throw DomainException.Forbidden("match.not_organizer", "Only the organizer can do this.");
+        }
+    }
+
     public static Match Create(Guid organizerUserId, int venueId, MatchType type, DateTimeOffset startsAt, int capacity, int externalPlayerCount,
         string? description, DateTimeOffset now)
     {
