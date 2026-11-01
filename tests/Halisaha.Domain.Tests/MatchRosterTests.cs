@@ -5,7 +5,7 @@ namespace Halisaha.Domain.Tests;
 
 public class MatchRosterTests
 {
-    private static readonly Guid Mert = Guid.Parse("22222222-2222-2222-2222-222222222222");
+    private static readonly Guid Mert = TestData.Mert;
 
     // Mert joins: one more participant, one less missing player, attendance not recorded yet.
     [Fact]
