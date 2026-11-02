@@ -1,5 +1,6 @@
 ﻿using Halisaha.Domain.Common;
 using Halisaha.Domain.Enums;
+using Halisaha.Domain.Errors;
 using Halisaha.Domain.Rules;
 using MatchType = Halisaha.Domain.Enums.MatchType;
 
@@ -57,7 +58,7 @@ public class Match
 
         if (IsParticipant(playerId))
         {
-            throw DomainException.Conflict("match.already_participant", "The player is already in the match.");
+            throw MatchErrors.AlreadyParticipant();
         }
 
         if (IsFull)
@@ -196,7 +197,7 @@ public class Match
         participation.SetAttendance(attendance);
     }
 
-    private void EnsureOrganizer(Guid actorId)
+    internal void EnsureOrganizer(Guid actorId)
     {
         if (!IsOrganizer(actorId))
         {
