@@ -51,7 +51,7 @@ public class Match
     {
         if (playerId == Guid.Empty)
         {
-            throw DomainException.Validation("match.player_required", "Player is required.");
+            throw MatchErrors.PlayerRequired();
         }
 
         EnsureOpenAndNotStarted(now);
@@ -163,7 +163,7 @@ public class Match
         // Shape
         if (playerId == Guid.Empty)
         {
-            throw DomainException.Validation("match.player_required", "Player is required.");
+            throw MatchErrors.PlayerRequired();
         }
 
         if (attendance is not (Attendance.Present or Attendance.Absent))

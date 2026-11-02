@@ -1,4 +1,5 @@
 ﻿using Halisaha.Domain.Enums;
+using Halisaha.Domain.Errors;
 
 namespace Halisaha.Domain.Entities;
 
@@ -31,29 +32,35 @@ public class MatchRequest
         CreatedAt = now;
     }
 
-    // ---- BERAT: the four methods below are decision lines (state transitions). ----
-
-    /// <summary>The single home of the Pending rule. Throws <c>RequestErrors.NotPending()</c> (409) unless Pending.</summary>
     internal void EnsurePending()
     {
-        throw new NotImplementedException();
+        if (Status != RequestStatus.Pending)
+        {
+            throw RequestErrors.NotPending();
+        }
     }
 
-    /// <summary>Pending → Accepted; sets <see cref="ClosedAt"/>. Uses <see cref="EnsurePending"/>.</summary>
     internal void MarkAccepted(DateTimeOffset now)
     {
-        throw new NotImplementedException();
+        EnsurePending();
+
+        Status = RequestStatus.Accepted;
+        ClosedAt = now;
     }
 
-    /// <summary>Pending → Rejected; sets <see cref="ClosedAt"/>. Uses <see cref="EnsurePending"/>.</summary>
     internal void MarkRejected(DateTimeOffset now)
     {
-        throw new NotImplementedException();
+        EnsurePending();
+
+        Status = RequestStatus.Rejected;
+        ClosedAt = now;
     }
 
-    /// <summary>Pending → Withdrawn; sets <see cref="ClosedAt"/>. Uses <see cref="EnsurePending"/>.</summary>
     internal void MarkWithdrawn(DateTimeOffset now)
     {
-        throw new NotImplementedException();
+        EnsurePending();
+
+        Status = RequestStatus.Withdrawn;
+        ClosedAt = now;
     }
 }

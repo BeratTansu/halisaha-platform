@@ -8,6 +8,10 @@ namespace Halisaha.Domain.Errors;
 /// </summary>
 public static class MatchErrors
 {
+    /// <summary>Raised by <c>Match.AddParticipant</c>, <c>Match.RecordAttendance</c> and <c>RequestPolicy</c>.</summary>
+    public static DomainException PlayerRequired() =>
+        DomainException.Validation("match.player_required", "Player is required.");
+
     /// <summary>Raised by <c>Match.AddParticipant</c> and by <c>RequestPolicy</c> when sending a request.</summary>
     public static DomainException AlreadyParticipant() =>
         DomainException.Conflict("match.already_participant", "The player is already in the match.");
