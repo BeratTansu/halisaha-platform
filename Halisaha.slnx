@@ -6,6 +6,7 @@
     <Project Path="src/Halisaha.Infrastructure/Halisaha.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Halisaha.Application.Tests/Halisaha.Application.Tests.csproj" />
     <Project Path="tests/Halisaha.Domain.Tests/Halisaha.Domain.Tests.csproj" />
     <Project Path="tests/Halisaha.Infrastructure.Tests/Halisaha.Infrastructure.Tests.csproj" />
   </Folder>
