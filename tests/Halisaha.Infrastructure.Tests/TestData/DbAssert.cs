@@ -18,4 +18,16 @@ public static class DbAssert
         Assert.Equal(constraintName, postgres.ConstraintName);
         return postgres;
     }
+
+    /// <summary>
+    /// SaveChanges'in foreign key ihlaliyle (Restrict) reddedildiğini doğrular. Constraint adı bilerek kontrol
+    /// edilmez: birden fazla FK ihlal edildiğinde PostgreSQL hangisini raporlayacağını veriye göre seçer.
+    /// </summary>
+    public static async Task<PostgresException> ThrowsForeignKeyViolationAsync(Func<Task> action)
+    {
+        var exception = await Assert.ThrowsAsync<DbUpdateException>(action);
+        var postgres = Assert.IsType<PostgresException>(exception.InnerException);
+        Assert.Equal(PostgresErrorCodes.ForeignKeyViolation, postgres.SqlState); // 23503
+        return postgres;
+    }
 }
