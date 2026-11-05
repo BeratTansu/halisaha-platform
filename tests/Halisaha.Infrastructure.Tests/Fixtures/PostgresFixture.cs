@@ -42,6 +42,12 @@ public sealed class PostgresFixture : IAsyncLifetime
     public HalisahaDbContext CreateContext() => new(_options);
 
     /// <summary>
+    /// Uygulamanın DI kurulumunu (AddInfrastructure) gerçek container'a bağlamak için. Context'i kendisi oluşturan
+    /// testler <see cref="CreateContext"/>'i kullanır; scope içinde UserManager/UnitOfWork isteyen testler bunu.
+    /// </summary>
+    public string ConnectionString => _container.GetConnectionString();
+
+    /// <summary>
     /// Province/District Id'leri elle verilir (ValueGeneratedNever) ve adları unique'tir; testler paylaşılan
     /// DB'de çakışmasın diye her il ve ilçe buradan benzersiz bir Id alır.
     /// </summary>
