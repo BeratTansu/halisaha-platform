@@ -1,4 +1,5 @@
-﻿using Halisaha.Infrastructure.Persistence;
+﻿using Halisaha.Application.Abstractions.Persistence;
+using Halisaha.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,6 +18,9 @@ public static class DependencyInjection
         // Scoped (varsayılan) bilinçli: Register'da UserManager ile UnitOfWork aynı context örneğini paylaşmalı.
         // EnableRetryOnFailure eklenmez: retry stratejisi ExecuteInTransactionAsync'in açtığı transaction'larla çalışmaz.
         services.AddDbContext<HalisahaDbContext>(options => options.UseNpgsql(connectionString).UseHalisahaSeeding());
+
+        // Context ile aynı ömür: UnitOfWork, request scope'undaki context'in transaction'ını yönetir.
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;
     }
