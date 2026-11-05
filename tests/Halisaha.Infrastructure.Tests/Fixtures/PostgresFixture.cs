@@ -15,7 +15,9 @@ public sealed class PostgresFixture : IAsyncLifetime
     private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:17").Build();
 
     private DbContextOptions<HalisahaDbContext> _options = null!;
-    private int _lastLocationId;
+    // Seed gerçek il (1-81) ve ilçe (1001-81xxx) Id'lerini yükler; test verisi onlarla çakışmasın diye
+    // sayaç çok yüksek bir değerden başlar. Testler seed'lenmiş verilere bağımlı değildir.
+    private int _lastLocationId = 1_000_000;
 
     public async Task InitializeAsync()
     {
@@ -23,6 +25,7 @@ public sealed class PostgresFixture : IAsyncLifetime
 
         _options = new DbContextOptionsBuilder<HalisahaDbContext>()
             .UseNpgsql(_container.GetConnectionString())
+            .UseHalisahaSeeding() // uygulamayla aynı: Migrate il/ilçe verisini de yükler
             .Options;
 
         // EnsureCreated değil Migrate: test edilen şeyin bir parçası migration'ın kendisi.
