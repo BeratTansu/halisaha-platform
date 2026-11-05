@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: halisaha-postgres
+    environment:
+      POSTGRES_DB: halisaha
+      POSTGRES_USER: halisaha
+      POSTGRES_PASSWORD: halisaha_dev
+    ports:
+      - "5434:5432"
+    volumes:
+      - halisaha-pgdata:/var/lib/postgresql/data
+
+volumes:
+  halisaha-pgdata:

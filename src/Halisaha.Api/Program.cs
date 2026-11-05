@@ -1,4 +1,17 @@
+using Halisaha.Infrastructure;
+
 var builder = WebApplication.CreateBuilder(args);
+
+// Yerel geliştirme: appsettings.Development.json. Production: ConnectionStrings__Halisaha ortam değişkeni.
+var connectionString = builder.Configuration.GetConnectionString("Halisaha");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "Connection string 'Halisaha' is not configured. " +
+        "Set ConnectionStrings:Halisaha (Development: appsettings.Development.json, other environments: the ConnectionStrings__Halisaha environment variable).");
+}
+
+builder.Services.AddInfrastructure(connectionString);
 
 // Add services to the container.
 
