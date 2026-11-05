@@ -10,8 +10,9 @@ public class MatchParticipationConfiguration : IEntityTypeConfiguration<MatchPar
     {
         builder.ToTable("MatchParticipations");
 
-        // Id domain'de üretilir. Bu ayar olmazsa, yüklenmiş maça AddParticipant ile eklenen katılımı
-        // EF Unchanged sayar ve SaveChanges onu hiç yazmaz (hata da vermez).
+        // Id domain'de üretilir. Bu ayar olmazsa EF, yüklenmiş maça eklenen yeni katılımın dolu key'ini
+        // "var olan kayıt" sayıp Modified işaretler; SaveChanges olmayan satıra UPDATE dener ve
+        // DbUpdateConcurrencyException fırlatır (EF Core 10.0.14'te ölçüldü; MatchRosterPersistenceTests yakalar).
         builder.Property(p => p.Id).ValueGeneratedNever();
 
         builder.HasOne<PlayerProfile>()
