@@ -16,7 +16,7 @@ public static class DependencyInjection
 
         // Scoped (varsayılan) bilinçli: Register'da UserManager ile UnitOfWork aynı context örneğini paylaşmalı.
         // EnableRetryOnFailure eklenmez: retry stratejisi ExecuteInTransactionAsync'in açtığı transaction'larla çalışmaz.
-        services.AddDbContext<HalisahaDbContext>(options => options.UseNpgsql(connectionString));
+        services.AddDbContext<HalisahaDbContext>(options => options.UseNpgsql(connectionString).UseHalisahaSeeding());
 
         return services;
     }
