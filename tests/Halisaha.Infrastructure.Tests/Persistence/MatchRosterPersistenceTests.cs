@@ -20,7 +20,7 @@ public class MatchRosterPersistenceTests(PostgresFixture fixture)
     // Maç kadrosuyla birlikte yüklenmeli: Include olmadan Participations boş gelir ve domain (IsParticipant,
     // kapasite) yanlış karar verir. Repository diliminde bu, "maç her zaman kadrosuyla yüklenir" sözleşmesi olacak.
     private static Task<Match> LoadMatchWithRosterAsync(HalisahaDbContext context, Guid matchId) =>
-        context.Matches.Include(m => m.Participations).SingleAsync(m => m.Id == matchId);
+        GraphBuilder.LoadMatchWithRosterAsync(context, matchId);
 
     [Fact]
     public async Task Create_PersistsOrganizerParticipation()
