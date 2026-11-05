@@ -1,0 +1,57 @@
+# Her PR'da ve main'e her push'ta solution'ı derler ve bütün testleri (Testcontainers dahil) çalıştırır.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# En az yetki: workflow yalnızca kodu okur.
+permissions:
+  contents: read
+
+# Aynı PR'a/branch'e yeni push gelirse eski çalışma iptal edilir.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    # Takılan bir build veya container sonsuza kadar beklemesin.
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore Halisaha.slnx
+
+      - name: Build
+        run: dotnet build Halisaha.slnx --configuration Release --no-restore
+
+      # ubuntu-latest'te Docker hazır gelir; Infrastructure testleri Testcontainers ile postgres:17 başlatır.
+      - name: Test
+        run: >-
+          dotnet test Halisaha.slnx
+          --configuration Release
+          --no-build
+          --logger trx
+          --results-directory TestResults
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results
+          path: TestResults/**/*.trx
+          if-no-files-found: ignore
+          retention-days: 7
