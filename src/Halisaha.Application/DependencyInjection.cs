@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using Halisaha.Application.Commands.Login;
 using Halisaha.Application.Commands.Register;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,6 +18,9 @@ public static class DependencyInjection
         // scoped servis isterse yakalanma (captive dependency) olmasın diye o da scoped.
         services.AddScoped<IValidator<RegisterCommand>, RegisterCommandValidator>();
         services.AddScoped<RegisterHandler>();
+
+        services.AddScoped<IValidator<LoginCommand>, LoginCommandValidator>();
+        services.AddScoped<LoginHandler>();
 
         return services;
     }
