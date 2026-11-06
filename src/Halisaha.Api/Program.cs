@@ -3,6 +3,8 @@ using Halisaha.Api.Errors;
 using Halisaha.Application;
 using Halisaha.Infrastructure;
 using Halisaha.Infrastructure.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,6 +36,18 @@ builder.Services.AddInfrastructure(
 // Uygulamanın saati (Karar 7): handler'lar "şimdi"yi buradan alır; testler sahte saat verebilir.
 builder.Services.AddSingleton(TimeProvider.System);
 
+// Kimlik doğrulama: JWT bearer (Karar 11). Doğrulama parametreleri token'ı üreten tarafla aynı JwtOptions'tan,
+// aynı yerden (JwtTokenValidation) kurulur; iki taraf ayrı ayar okuyamaz. MapInboundClaims kapalı: claim'ler
+// token'daki adıyla gelir ("sub" ClaimTypes.NameIdentifier'a dönüşmez; 6 Kasım'da ölçüldü, varsayılan açıktı).
+// 401/403 gövdeleri (code + traceId) ve fallback policy sonraki dilimde; şimdilik korunan endpoint yok.
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
+builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+    .Configure<IOptions<JwtOptions>>((bearer, jwt) =>
+    {
+        bearer.MapInboundClaims = false;
+        bearer.TokenValidationParameters = JwtTokenValidation.CreateParameters(jwt.Value);
+    });
+
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 
@@ -61,6 +75,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

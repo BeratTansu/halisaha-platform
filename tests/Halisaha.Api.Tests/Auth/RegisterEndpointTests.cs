@@ -149,6 +149,19 @@ public sealed class RegisterEndpointTests(ApiFixture fixture)
     }
 
     [Fact]
+    public async Task InvalidBearerToken_DoesNotBlockAnonymousRegister()
+    {
+        // UseAuthentication pipeline'da: bozuk bir token anonim endpoint'i engellememeli (eski bir oturumdan
+        // kalan token'la kayıt olan istemci). Handler token'ı reddeder ama [AllowAnonymous] endpoint çalışır.
+        using var request = new HttpRequestMessage(HttpMethod.Post, Url) { Content = JsonContent.Create(ValidBody()) };
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "not.a.token");
+
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
+
+    [Fact]
     public async Task UnexpectedFailure_Returns500WithoutDetails_AndIsLoggedAsError()
     {
         const string secret = "internal-detail-that-must-not-leak";
