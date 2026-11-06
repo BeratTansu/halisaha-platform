@@ -44,6 +44,13 @@ internal sealed class ApiExceptionHandler(IProblemDetailsService problemDetails,
 
         httpContext.Response.StatusCode = details.Status!.Value;
 
+        // RFC 9110: 401 cevabı WWW-Authenticate taşımalı; istemciye hangi şemayla kimlik kanıtlayacağını söyler.
+        // Login'in 401'i de bu yoldan geçer (L3). Token'ın 401'i (JwtBearer challenge) sonraki dilimde.
+        if (details.Status == StatusCodes.Status401Unauthorized)
+        {
+            httpContext.Response.Headers.WWWAuthenticate = "Bearer";
+        }
+
         // Exception bilerek ProblemDetailsContext'e verilmez: gövdeye hiçbir koşulda exception bilgisi girmesin.
         return await problemDetails.TryWriteAsync(new ProblemDetailsContext
         {
@@ -68,6 +75,10 @@ internal sealed class ApiExceptionHandler(IProblemDetailsService problemDetails,
         DomainErrorKind.Validation => StatusCodes.Status400BadRequest,
         DomainErrorKind.Forbidden => StatusCodes.Status403Forbidden,
         DomainErrorKind.Conflict => StatusCodes.Status409Conflict,
+        DomainErrorKind.Unauthenticated => StatusCodes.Status401Unauthorized,
+        // L5: kilitli hesap. Retry-After yok (kilidin bitiş zamanını taşımak exception'a veri alanı gerektirirdi);
+        // IP rate limit'in 429'u (system.rate_limited) kendi Retry-After'ıyla Dilim 5'te gelir.
+        DomainErrorKind.TooManyRequests => StatusCodes.Status429TooManyRequests,
         _ => null,
     };
 

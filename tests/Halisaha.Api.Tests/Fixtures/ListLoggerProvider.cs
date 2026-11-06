@@ -3,10 +3,14 @@ using Microsoft.Extensions.Logging;
 
 namespace Halisaha.Api.Tests.Fixtures;
 
-/// <summary>"500 Error seviyesinde, exception'la loglandı" gibi davranışlar ancak log'a bakılarak doğrulanır.</summary>
+/// <summary>
+/// "500 Error seviyesinde, exception'la loglandı" ya da "parola log'a düşmedi" gibi davranışlar ancak log'a
+/// bakılarak doğrulanır. <see cref="Entry.State"/>, mesaj şablonuna girmeyen yapılandırılmış alanları da taşır:
+/// bir log sağlayıcısı (ör. JSON konsolu) mesajı değil bu alanları yazabilir.
+/// </summary>
 public sealed class ListLoggerProvider : ILoggerProvider
 {
-    public sealed record Entry(string Category, LogLevel Level, string Message, Exception? Exception);
+    public sealed record Entry(string Category, LogLevel Level, string Message, Exception? Exception, string State);
 
     private readonly ConcurrentQueue<Entry> _entries = new();
 
@@ -26,6 +30,10 @@ public sealed class ListLoggerProvider : ILoggerProvider
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
             Func<TState, Exception?, string> formatter) =>
-            entries.Enqueue(new Entry(category, logLevel, formatter(state, exception), exception));
+            entries.Enqueue(new Entry(category, logLevel, formatter(state, exception), exception, Describe(state)));
+
+        private static string Describe<TState>(TState state) => state is IEnumerable<KeyValuePair<string, object?>> pairs
+            ? string.Join("; ", pairs.Select(p => $"{p.Key}={p.Value}"))
+            : state?.ToString() ?? string.Empty;
     }
 }

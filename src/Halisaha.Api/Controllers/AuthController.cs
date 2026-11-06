@@ -1,4 +1,5 @@
 ﻿using Halisaha.Api.Contracts.Auth;
+using Halisaha.Application.Commands.Login;
 using Halisaha.Application.Commands.Register;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,8 +18,7 @@ public sealed class AuthController : ControllerBase
     /// Yeni oyuncu kaydı. 201 + userId döner; Location header'ı yok (kullanıcıyı getiren bir GET endpoint'i
     /// henüz yok, var olmayan bir adrese işaret edilmez).
     /// </summary>
-    // Handler constructor'dan değil action parametresinden alınır: Login eklendiğinde her istek yalnızca
-    // kendi handler'ını oluşturur.
+    // Handler constructor'dan değil action parametresinden alınır: her istek yalnızca kendi handler'ını oluşturur.
     [HttpPost("register")]
     [AllowAnonymous]
     [ProducesResponseType<RegisterResponse>(StatusCodes.Status201Created)]
@@ -30,5 +30,25 @@ public sealed class AuthController : ControllerBase
         var result = await handler.HandleAsync(request.ToCommand(), cancellationToken);
 
         return StatusCode(StatusCodes.Status201Created, new RegisterResponse(result.UserId));
+    }
+
+    /// <summary>
+    /// E-posta ve parolayla giriş (L3, L4, L7). 200 + AuthResponse. Hatalar: 400 validation.failed (boş alan),
+    /// 401 auth.invalid_credentials (kayıtsız e-posta ve yanlış parola aynı), 429 auth.locked_out.
+    /// </summary>
+    [HttpPost("login")]
+    [AllowAnonymous]
+    [ProducesResponseType<AuthResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests)]
+    public async Task<ActionResult<AuthResponse>> Login(
+        LoginRequest request, [FromServices] LoginHandler handler, CancellationToken cancellationToken)
+    {
+        var result = await handler.HandleAsync(request.ToCommand(), cancellationToken);
+
+        // Token taşıyan cevap hiçbir önbellekte (tarayıcı, proxy) saklanmaz (RFC 6749 5.1).
+        Response.Headers.CacheControl = "no-store";
+        return Ok(AuthResponse.From(result));
     }
 }

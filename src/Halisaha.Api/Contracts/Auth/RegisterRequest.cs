@@ -32,11 +32,13 @@ public sealed record RegisterRequest(
         SkillLevel,
         PreferredDistrictId);
 
-    // Command'ınki gibi: istek bir gün loglanırsa parola görünmesin.
+    // MVC action argümanlarını Trace seviyesinde ToString ile loglar (ControllerActionInvoker; 6 Kasım'da
+    // LoginEndpointTests'teki log testiyle görüldü). Bu yüzden parola gibi kişisel veriler de maskelenir: log'a
+    // kişisel veri yazılmaz. Yalnızca kişisel olmayan alanlar görünür.
     private bool PrintMembers(System.Text.StringBuilder builder)
     {
-        builder.Append($"Email = {Email}, Password = ***, FirstName = {FirstName}, LastName = {LastName}, ");
-        builder.Append($"PhoneNumber = {PhoneNumber}, PreferredPosition = {PreferredPosition}, ");
+        builder.Append("Email = ***, Password = ***, FirstName = ***, LastName = ***, PhoneNumber = ***, ");
+        builder.Append($"PreferredPosition = {PreferredPosition}, ");
         builder.Append($"SkillLevel = {SkillLevel}, PreferredDistrictId = {PreferredDistrictId}");
         return true;
     }

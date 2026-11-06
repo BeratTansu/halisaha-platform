@@ -205,12 +205,20 @@ public sealed class RegisterEndpointTests(ApiFixture fixture)
     }
 
     [Fact]
-    public void RegisterRequest_ToStringDoesNotContainThePassword()
+    public void RegisterRequest_ToStringDoesNotContainThePasswordOrPersonalData()
     {
+        // MVC action argümanlarını Trace seviyesinde ToString ile loglar (LoginEndpointTests'teki log testi).
         var request = new Contracts.Auth.RegisterRequest(
-            "a@b.co", "cok-gizli-parola-42", "A", "B", null, Position.Forward, 3, 1);
+            "ahmet@example.com", "cok-gizli-parola-42", "Ahmet", "Yılmaz", "+90 555 123 45 67", Position.Forward, 3, 1);
 
-        Assert.DoesNotContain("cok-gizli-parola-42", request.ToString());
+        var text = request.ToString();
+
+        Assert.DoesNotContain("cok-gizli-parola-42", text);
+        Assert.DoesNotContain("ahmet@example.com", text);
+        Assert.DoesNotContain("Ahmet", text);
+        Assert.DoesNotContain("Yılmaz", text);
+        Assert.DoesNotContain("555", text);
+        Assert.Contains("PreferredDistrictId = 1", text); // kişisel olmayan alanlar teşhis için görünür
     }
 
     // ---- yardımcılar ----
