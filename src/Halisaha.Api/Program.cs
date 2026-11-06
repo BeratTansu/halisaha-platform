@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using Halisaha.Api.Errors;
 using Halisaha.Application;
 using Halisaha.Infrastructure;
+using Halisaha.Infrastructure.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,7 +26,10 @@ if (string.IsNullOrWhiteSpace(connectionString))
 // Composition root: Api, Application ve Infrastructure'ı yalnızca burada birbirine bağlar.
 // Controller'lar Application tiplerini kullanır; Infrastructure tipleri burada (AddInfrastructure) kalır.
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure(connectionString);
+// JWT ayarları (Karar 11, L6): issuer/audience/süre appsettings.json'da; anahtar repoda değil (Development:
+// user-secrets, diğer ortamlar: Jwt__SigningKey). Kurallar Infrastructure'da, uygulama açılırken doğrulanır.
+builder.Services.AddInfrastructure(
+    connectionString, jwt => builder.Configuration.GetSection(JwtOptions.SectionName).Bind(jwt));
 
 // Uygulamanın saati (Karar 7): handler'lar "şimdi"yi buradan alır; testler sahte saat verebilir.
 builder.Services.AddSingleton(TimeProvider.System);

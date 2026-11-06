@@ -4,6 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Development'ta Jwt:SigningKey buradan okunur (repoya girmez). Id yalnızca makinedeki secrets klasörünü seçer. -->
+    <UserSecretsId>halisaha-api-6c3f1e0a-5b7d-4a2e-9f84-1d6b3c8e7a52</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

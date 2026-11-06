@@ -15,10 +15,12 @@ public static class InfrastructureServices
         var services = new ServiceCollection();
 
         // Host'un (WebApplication) normalde verdiği altyapı: UserManager ve UnitOfWork logger ister,
-        // Identity metrik toplayıcısı IMeterFactory ister.
+        // Identity metrik toplayıcısı IMeterFactory ister. TimeProvider composition root'un işi (Program.cs);
+        // token servisi ona bağımlı. Testler configure ile sahte saat verebilir (son kayıt kazanır).
         services.AddLogging();
         services.AddMetrics();
-        services.AddInfrastructure(fixture.ConnectionString);
+        services.AddSingleton(TimeProvider.System);
+        services.AddInfrastructure(fixture.ConnectionString, TestJwt.Configure());
         configure?.Invoke(services);
 
         // ValidateScopes: singleton'ın scoped bir servisi yakalaması (ör. context'i) hata verir.

@@ -34,13 +34,7 @@ public sealed class ApiFixture : IAsyncLifetime
 
     /// <summary>Uygulamanın bir parçasını değiştiren testler için (ör. 500 üretmek): aynı veritabanı, ayrı host.</summary>
     public WebApplicationFactory<Program> CreateFactory(Action<IWebHostBuilder>? configure = null) =>
-        new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
-        {
-            builder.UseEnvironment("Testing");
-            // UseSetting, Program.cs'in builder.Build()'den önceki okumasına (fail-fast kontrolü) ulaşır.
-            builder.UseSetting("ConnectionStrings:Halisaha", _container.GetConnectionString());
-            configure?.Invoke(builder);
-        });
+        TestApp.Create(_container.GetConnectionString(), configure);
 
     public async Task<T> QueryAsync<T>(Func<HalisahaDbContext, Task<T>> query)
     {

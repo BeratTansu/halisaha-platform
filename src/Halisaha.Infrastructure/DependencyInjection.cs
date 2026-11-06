@@ -1,23 +1,28 @@
 ﻿using Halisaha.Application.Abstractions.Identity;
 using Halisaha.Application.Abstractions.Persistence;
+using Halisaha.Infrastructure.Authentication;
 using Halisaha.Infrastructure.Identity;
 using Halisaha.Infrastructure.Persistence;
 using Halisaha.Infrastructure.Persistence.Queries;
 using Halisaha.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Halisaha.Infrastructure;
 
 public static class DependencyInjection
 {
     /// <summary>
-    /// Infrastructure servislerini kaydeder. Connection string'in nereden geldiğini çağıran bilir
-    /// (Api: configuration, testler: Testcontainers); Infrastructure yalnızca onunla ne yapılacağını bilir.
+    /// Infrastructure servislerini kaydeder. Connection string'in ve JWT ayarlarının nereden geldiğini çağıran bilir
+    /// (Api: configuration, testler: Testcontainers ve kendi test anahtarları); Infrastructure yalnızca onlarla ne
+    /// yapılacağını bilir.
     /// </summary>
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, string connectionString)
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services, string connectionString, Action<JwtOptions> configureJwt)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+        ArgumentNullException.ThrowIfNull(configureJwt);
 
         // Scoped (varsayılan) bilinçli: Register'da UserManager ile UnitOfWork aynı context örneğini paylaşmalı.
         // EnableRetryOnFailure eklenmez: retry stratejisi ExecuteInTransactionAsync'in açtığı transaction'larla çalışmaz.
@@ -46,6 +51,14 @@ public static class DependencyInjection
             })
             .AddEntityFrameworkStores<HalisahaDbContext>();
         services.AddScoped<IIdentityService, IdentityService>();
+
+        // JWT (Karar 11, L6). ValidateOnStart: host altında ayar bozuksa uygulama açılmaz; aksi halde hata ilk
+        // login'de (kısa anahtar: IDX10720) ya da her doğrulamada (anahtar yok: herkes 401) ortaya çıkardı.
+        // Host dışında validator, IOptions<JwtOptions>.Value'ya ilk erişimde çalışır.
+        services.AddOptions<JwtOptions>().Configure(configureJwt).ValidateOnStart();
+        services.AddSingleton<IValidateOptions<JwtOptions>, JwtOptionsValidator>();
+        // Singleton: durum taşımaz; bağımlılıkları (IOptions, TimeProvider) da singleton.
+        services.AddSingleton<ITokenService, JwtTokenService>();
 
         return services;
     }
