@@ -10,6 +10,12 @@ public enum DomainErrorKind
 
     /// <summary>The caller is known but not allowed to do this (403).</summary>
     Forbidden,
+
+    /// <summary>The caller could not be identified, e.g. wrong email or password (401).</summary>
+    Unauthenticated,
+
+    /// <summary>The caller must wait before trying again, e.g. a locked account (429).</summary>
+    TooManyRequests,
 }
 
 /// <summary>
@@ -30,4 +36,6 @@ public sealed class DomainException : Exception
     public static DomainException Validation(string code, string message) => new(DomainErrorKind.Validation, code, message);
     public static DomainException Conflict(string code, string message) => new(DomainErrorKind.Conflict, code, message);
     public static DomainException Forbidden(string code, string message) => new(DomainErrorKind.Forbidden, code, message);
+    public static DomainException Unauthenticated(string code, string message) => new(DomainErrorKind.Unauthenticated, code, message);
+    public static DomainException TooManyRequests(string code, string message) => new(DomainErrorKind.TooManyRequests, code, message);
 }
