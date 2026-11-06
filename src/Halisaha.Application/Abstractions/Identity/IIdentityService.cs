@@ -15,4 +15,13 @@ public interface IIdentityService
     /// adımlarında geçerli olur.
     /// </summary>
     Task<IdentityCreationResult> CreateUserAsync(NewIdentityUser user, string password);
+
+    /// <summary>
+    /// E-posta ve parolayı doğrular; kilit kontrolü ve başarısız deneme sayacı (L4) bu çağrının içindedir.
+    /// Bir <c>IUnitOfWork</c> transaction'ı içinde ÇAĞRILMAZ: sayaç güncellemesi kendi SaveChanges'iyle hemen
+    /// kalıcı olur; dışarıdaki bir rollback başarısız denemeyi silip kilidi atlatırdı (Karar 10).
+    /// E-posta normalize edilmiş (trim) gelmelidir; büyük/küçük harf farkını kimlik sistemi kendisi giderir.
+    /// CancellationToken almaz: SignInManager token kabul etmiyor.
+    /// </summary>
+    Task<CredentialVerificationResult> VerifyCredentialsAsync(string email, string password);
 }

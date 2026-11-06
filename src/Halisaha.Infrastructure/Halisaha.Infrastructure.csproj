@@ -6,6 +6,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- SignInManager (L4) ve AddAuthentication paketle değil ASP.NET Core paylaşılan framework'üyle gelir; sürümü
+         makinede kurulu runtime'dır (10.0.x), paket sürümü değil. Karar 11, Dilim 2 notları. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.14" />
     <!-- JwtBearer 10.0.14'ün (Api) getirdiği sürümle aynı: projede tek IdentityModel sürümü olsun. -->
     <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.19.2" />
