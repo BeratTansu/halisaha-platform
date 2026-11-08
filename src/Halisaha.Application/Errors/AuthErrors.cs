@@ -9,6 +9,21 @@ namespace Halisaha.Application.Errors;
 /// </summary>
 public static class AuthErrors
 {
+    public const string UnauthenticatedCode = "auth.unauthenticated";
+    public const string ForbiddenCode = "auth.forbidden";
+
+    /// <summary>
+    /// L3 + auth sözleşmesi (Karar 11): "bu token ile seni tanıyamıyorum". Token yok, geçersiz, süresi dolmuş ya da
+    /// sahibi artık sistemde yok: hepsi aynı cevabı alır, istemcinin tek kuralı oturumu kapatmaktır. API iki yerden
+    /// üretir: JwtBearer challenge'ı (token kendisi geçersiz) ve aktörü bulamayan handler'lar (bu fabrika).
+    /// </summary>
+    public static DomainException Unauthenticated() =>
+        DomainException.Unauthenticated(UnauthenticatedCode, "Authentication is required.");
+
+    /// <summary>Kimlik tamam, yetki yok (L3). İstemci oturumu kapatmaz.</summary>
+    public static DomainException Forbidden() =>
+        DomainException.Forbidden(ForbiddenCode, "You do not have permission to perform this action.");
+
     public static DomainException EmailTaken() =>
         DomainException.Conflict("auth.email_taken", "An account with this email address already exists.");
 

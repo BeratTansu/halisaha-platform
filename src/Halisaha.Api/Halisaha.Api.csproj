@@ -18,6 +18,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Testlerin yalnızca test projesinde duran controller'ı GetActorId'yi (internal) çağırabilsin. -->
+    <InternalsVisibleTo Include="Halisaha.Api.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Halisaha.Application\Halisaha.Application.csproj" />
     <ProjectReference Include="..\Halisaha.Infrastructure\Halisaha.Infrastructure.csproj" />
   </ItemGroup>
