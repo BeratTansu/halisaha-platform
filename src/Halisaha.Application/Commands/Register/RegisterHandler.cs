@@ -2,6 +2,7 @@
 using FluentValidation.Results;
 using Halisaha.Application.Abstractions.Identity;
 using Halisaha.Application.Abstractions.Persistence;
+using Halisaha.Application.Commands.Login;
 using Halisaha.Application.Errors;
 using Halisaha.Domain.Entities;
 
@@ -17,9 +18,10 @@ public sealed class RegisterHandler(
     IIdentityService identity,
     IPlayerProfileRepository profiles,
     IUnitOfWork unitOfWork,
+    ITokenService tokenService,
     TimeProvider timeProvider)
 {
-    public async Task<RegisterResult> HandleAsync(RegisterCommand command, CancellationToken cancellationToken)
+    public async Task<AuthResult> HandleAsync(RegisterCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
 
@@ -73,8 +75,9 @@ public sealed class RegisterHandler(
             profiles.Add(profile);
         }, cancellationToken);
 
-        // 7. Login diliminde: token burada, commit'ten SONRA ve transaction dışında üretilecek (ITokenService).
-        return new RegisterResult(userId);
+        // 7. Token commit'ten SONRA ve transaction dışında üretilir: önce kayıt kalıcı olur, sonra dışarı token verilir.
+        //    Commit başarısız olursa buraya hiç gelinmez, var olmayan bir kullanıcıya token üretilmez.
+        return new AuthResult(userId, tokenService.CreateAccessToken(userId));
     }
 
     // Identity'nin reddi, validator'ın hatalarıyla aynı biçimde (ValidationException, command'ın alan adları)

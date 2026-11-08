@@ -71,6 +71,11 @@ builder.Services.AddControllers()
         // Model binding hataları (bozuk JSON, tanımsız enum metni) da aynı 400 biçiminde dönsün.
         options.InvalidModelStateResponseFactory = ModelBindingProblems.Create);
 
+// OpenAPI dokümanı da enum'ları adıyla ("Forward") göstersin: doküman üreticisi controller ayarını (AddJsonOptions) okumuyor.
+// Bu satır olmasaydı Scalar'da "preferredPosition": 1 gibi bir örnek görünür ve onu gönderen 400 hatası alırdı.
+builder.Services.ConfigureHttpJsonOptions(options =>
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false)));
+
 // OpenAPI dokümanı (/openapi/v1.json) + Bearer şeması: Scalar token yapıştırma alanını buradan bilir.
 builder.Services.AddOpenApi(options =>
 {
@@ -85,11 +90,12 @@ app.UseExceptionHandler();
 
 // API haritası yalnızca Development'ta: production'da hangi endpoint'lerin olduğu dışarı açılmaz. Fallback policy
 // her endpoint'e giriş şartı koyduğu için ikisi de açıkça anonim işaretlenir (yoksa sayfa 401 verirdi).
-// Scalar arayüzü: /scalar (token'ı sağ üstteki Authentication alanına yapıştır).
+// Scalar arayüzü: /scalar. Bearer varsayılan seçili: token'ı Authentication alanına yapıştırmak yeter.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi().AllowAnonymous();
-    app.MapScalarApiReference().AllowAnonymous();
+    app.MapScalarApiReference(options => options.AddPreferredSecuritySchemes(BearerSecurityTransformer.SchemeName))
+        .AllowAnonymous();
 }
 
 app.UseHttpsRedirection();

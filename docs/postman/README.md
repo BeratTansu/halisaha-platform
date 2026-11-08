@@ -4,7 +4,7 @@
 
 | # | İstek | Beklenen |
 |---|---|---|
-| 1 | Register | 201 + `userId` (her çalıştırmada yeni e-posta) |
+| 1 | Register | 201 `{ userId, accessToken, expiresIn }` (her çalıştırmada yeni e-posta; otomatik giriş) |
 | 2 | Register, aynı e-posta | 409 `auth.email_taken` |
 | 3 | Login | 200 `{ userId, accessToken, expiresIn }`; token `accessToken` değişkenine yazılır |
 | 4 | Login, yanlış parola | 401 `auth.invalid_credentials`, `WWW-Authenticate: Bearer` |

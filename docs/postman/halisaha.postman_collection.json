@@ -29,11 +29,17 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('201 + userId', () => {",
+                  "pm.test('201 + AuthResponse (otomatik giriş)', () => {",
                   "    pm.response.to.have.status(201);",
                   "    const json = pm.response.json();",
+                  "    pm.expect(Object.keys(json).sort()).to.eql(['accessToken', 'expiresIn', 'userId']);",
                   "    pm.expect(json.userId).to.match(/^[0-9a-f-]{36}$/);",
                   "    pm.collectionVariables.set('userId', json.userId);",
+                  "    // Kayıt token'ı da verir; login olmadan /api/me çalışır. 3. istek (login) bu değeri yenisiyle değiştirir.",
+                  "    pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "});",
+                  "pm.test('Token cevabı önbelleğe girmez', () => {",
+                  "    pm.expect(pm.response.headers.get('Cache-Control')).to.include('no-store');",
                   "});"
                 ]
               }

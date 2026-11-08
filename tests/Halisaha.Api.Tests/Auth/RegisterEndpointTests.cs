@@ -32,7 +32,7 @@ public sealed class RegisterEndpointTests(ApiFixture fixture)
     private readonly HttpClient _client = fixture.Factory.CreateClient();
 
     [Fact]
-    public async Task ValidRequest_Returns201WithUserIdOnly_AndPersistsEveryField()
+    public async Task ValidRequest_Returns201WithAuthResponse_AndPersistsEveryField()
     {
         var email = UniqueEmail();
         var body = ValidBody(email) with
@@ -48,7 +48,10 @@ public sealed class RegisterEndpointTests(ApiFixture fixture)
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.Null(response.Headers.Location); // bilinçli: kullanıcıyı getiren bir GET endpoint'i henüz yok
         using var json = await ReadJsonAsync(response);
-        Assert.Equal(["userId"], json.RootElement.EnumerateObject().Select(p => p.Name)); // geçici sözleşme
+        // L7: login ile aynı gövde. userId korundu, mevcut istemciler bozulmaz.
+        Assert.Equal(["accessToken", "expiresIn", "userId"], json.RootElement.EnumerateObject().Select(p => p.Name).Order());
+        Assert.False(string.IsNullOrEmpty(json.RootElement.GetProperty("accessToken").GetString()));
+        Assert.Equal(60 * 60, json.RootElement.GetProperty("expiresIn").GetInt32());
         var userId = json.RootElement.GetProperty("userId").GetGuid();
 
         // Request → command → handler zinciri hiçbir alanı kaybetmedi; kullanıcı ve profil birlikte yazıldı.
@@ -149,6 +152,34 @@ public sealed class RegisterEndpointTests(ApiFixture fixture)
     }
 
     [Fact]
+    public async Task SuccessfulResponse_IsNotCached()
+    {
+        // Gövdede token var: login'deki gibi hiçbir önbellekte saklanmamalı.
+        var response = await _client.PostAsJsonAsync(Url, ValidBody());
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.True(response.Headers.CacheControl?.NoStore, "A response carrying a token must not be stored by caches.");
+    }
+
+    [Fact]
+    public async Task TokenFromRegister_SignsInImmediately()
+    {
+        // Otomatik girişin kanıtı: register'ın token'ıyla login olmadan /api/me çalışır ve aynı kullanıcıyı döner.
+        var response = await _client.PostAsJsonAsync(Url, ValidBody());
+        using var json = await ReadJsonAsync(response);
+        var userId = json.RootElement.GetProperty("userId").GetGuid();
+        var token = json.RootElement.GetProperty("accessToken").GetString();
+
+        using var me = new HttpRequestMessage(HttpMethod.Get, "/api/me");
+        me.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        var meResponse = await _client.SendAsync(me);
+
+        Assert.Equal(HttpStatusCode.OK, meResponse.StatusCode);
+        using var meJson = await ReadJsonAsync(meResponse);
+        Assert.Equal(userId, meJson.RootElement.GetProperty("userId").GetGuid());
+    }
+
+    [Fact]
     public async Task InvalidBearerToken_DoesNotBlockAnonymousRegister()
     {
         // UseAuthentication pipeline'da: bozuk bir token anonim endpoint'i engellememeli (eski bir oturumdan
@@ -209,7 +240,7 @@ public sealed class RegisterEndpointTests(ApiFixture fixture)
     {
         // MVC action argümanlarını Trace seviyesinde ToString ile loglar (LoginEndpointTests'teki log testi).
         var request = new Contracts.Auth.RegisterRequest(
-            "ahmet@example.com", "cok-gizli-parola-42", "Ahmet", "Yılmaz", "+90 555 123 45 67", Position.Forward, 3, 1);
+            "ahmet@example.com", "cok-gizli-parola-42", "Ahmet", "Yılmaz", Position.Forward, 3, 1, "+90 555 123 45 67");
 
         var text = request.ToString();
 

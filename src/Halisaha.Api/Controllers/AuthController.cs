@@ -15,21 +15,23 @@ namespace Halisaha.Api.Controllers;
 public sealed class AuthController : ControllerBase
 {
     /// <summary>
-    /// Yeni oyuncu kaydı. 201 + userId döner; Location header'ı yok (kullanıcıyı getiren bir GET endpoint'i
-    /// henüz yok, var olmayan bir adrese işaret edilmez).
+    /// Yeni oyuncu kaydı + otomatik giriş (L7). 201 + AuthResponse (login ile aynı gövde); Location header'ı yok
+    /// (kullanıcıyı getiren adres /api/me, oluşturulan kaynağın kendi adresi değil).
     /// </summary>
     // Handler constructor'dan değil action parametresinden alınır: her istek yalnızca kendi handler'ını oluşturur.
     [HttpPost("register")]
     [AllowAnonymous]
-    [ProducesResponseType<RegisterResponse>(StatusCodes.Status201Created)]
+    [ProducesResponseType<AuthResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<RegisterResponse>> Register(
+    public async Task<ActionResult<AuthResponse>> Register(
         RegisterRequest request, [FromServices] RegisterHandler handler, CancellationToken cancellationToken)
     {
         var result = await handler.HandleAsync(request.ToCommand(), cancellationToken);
 
-        return StatusCode(StatusCodes.Status201Created, new RegisterResponse(result.UserId));
+        // Token taşıyan cevap hiçbir önbellekte (tarayıcı, proxy) saklanmaz (RFC 6749 5.1).
+        Response.Headers.CacheControl = "no-store";
+        return StatusCode(StatusCodes.Status201Created, AuthResponse.From(result));
     }
 
     /// <summary>
