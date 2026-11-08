@@ -23,6 +23,9 @@ public static class TestApp
             // Her host kendi rastgele anahtarını alır (L6): repoda bilinen bir test anahtarı durmaz.
             // Issuer, audience ve süre uygulamanın appsettings.json'ından gelir.
             builder.UseSetting("Jwt:SigningKey", Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)));
+            // Test sunucusu istemci IP'si vermez: bütün testler tek kovaya (unknown) düşer ve ortak host'ta kota
+            // dolardı. Limit burada pratikte sınırsız; limitin kendisi AuthRateLimitingTests'te düşük limitle denenir.
+            builder.UseSetting("RateLimiting:Auth:PermitLimit", int.MaxValue.ToString(System.Globalization.CultureInfo.InvariantCulture));
             configure?.Invoke(builder);
         });
 }

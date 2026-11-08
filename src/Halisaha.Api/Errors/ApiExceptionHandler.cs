@@ -82,7 +82,7 @@ internal sealed class ApiExceptionHandler(IProblemDetailsService problemDetails,
         DomainErrorKind.Conflict => StatusCodes.Status409Conflict,
         DomainErrorKind.Unauthenticated => StatusCodes.Status401Unauthorized,
         // L5: kilitli hesap. Retry-After yok (kilidin bitiş zamanını taşımak exception'a veri alanı gerektirirdi);
-        // IP rate limit'in 429'u (system.rate_limited) kendi Retry-After'ıyla Dilim 5'te gelir.
+        // IP rate limit'in 429'u (system.rate_limited) buraya gelmez; Retry-After'ıyla AuthRateLimiting yazar.
         DomainErrorKind.TooManyRequests => StatusCodes.Status429TooManyRequests,
         _ => null,
     };
