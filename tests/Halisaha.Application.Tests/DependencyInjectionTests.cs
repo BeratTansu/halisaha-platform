@@ -2,6 +2,7 @@
 using Halisaha.Application.Abstractions.Persistence;
 using Halisaha.Application.Commands.Login;
 using Halisaha.Application.Commands.Register;
+using Halisaha.Application.Queries.GetMe;
 using Halisaha.Application.Tests.Fakes;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -27,6 +28,15 @@ public class DependencyInjectionTests
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<LoginHandler>());
     }
 
+    [Fact]
+    public void AddApplication_RegistersGetMeHandler()
+    {
+        using var provider = BuildProvider();
+        using var scope = provider.CreateScope();
+
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<GetMeHandler>());
+    }
+
     private static ServiceProvider BuildProvider()
     {
         // Port'lar Infrastructure'ın, TimeProvider composition root'un işi; burada sahteleriyle doldurulur.
@@ -38,6 +48,7 @@ public class DependencyInjectionTests
         services.AddScoped<IIdentityService, FakeIdentityService>();
         services.AddScoped<IPlayerProfileRepository, FakePlayerProfileRepository>();
         services.AddScoped<ILocationQueries, FakeLocationQueries>();
+        services.AddScoped<IUserQueries, FakeUserQueries>();
         services.AddSingleton<ITokenService, FakeTokenService>();
         services.AddSingleton(TimeProvider.System);
 

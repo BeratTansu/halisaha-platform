@@ -33,6 +33,7 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IPlayerProfileRepository, PlayerProfileRepository>();
         services.AddScoped<ILocationQueries, LocationQueries>();
+        services.AddScoped<IUserQueries, UserQueries>();
 
         // AddIdentity değil AddIdentityCore: cookie kimlik doğrulaması eklemez (JWT kullanılır). Roller eklenmez
         // (Player rolü yok; Admin kendi diliminde). AddEntityFrameworkStores store'u scoped kaydeder ve DI'daki
