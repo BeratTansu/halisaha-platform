@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using Halisaha.Api.Authentication;
 using Halisaha.Api.Errors;
 using Halisaha.Api.OpenApi;
+using Halisaha.Api.RateLimiting;
 using Halisaha.Application;
 using Halisaha.Infrastructure;
 using Halisaha.Infrastructure.Authentication;
@@ -60,6 +61,9 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
 builder.Services.AddAuthorizationBuilder()
     .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
+// Kayıt ve girişin IP başına limiti (Dilim 5): kurallar ve bilinen sınırları AuthRateLimiting'de.
+builder.Services.AddAuthRateLimiting();
+
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 
@@ -99,6 +103,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Routing'den sonra (WebApplication UseRouting'i en başa kendisi ekler; isimli politika endpoint'i bilmeli) ve
+// kimlik doğrulamadan önce: limiti aşan istek token doğrulamasına ve controller'a hiç ulaşmaz.
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();

@@ -2,7 +2,9 @@
 using Halisaha.Application.Commands.Login;
 using Halisaha.Application.Commands.Register;
 using Microsoft.AspNetCore.Authorization;
+using Halisaha.Api.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Halisaha.Api.Controllers;
 
@@ -15,15 +17,17 @@ namespace Halisaha.Api.Controllers;
 public sealed class AuthController : ControllerBase
 {
     /// <summary>
-    /// Yeni oyuncu kaydı + otomatik giriş (L7). 201 + AuthResponse (login ile aynı gövde); Location header'ı yok
+    /// Yeni oyuncu kaydı + otomatik giriş (L7). IP limiti login ile ortak (429 system.rate_limited). 201 + AuthResponse (login ile aynı gövde); Location header'ı yok
     /// (kullanıcıyı getiren adres /api/me, oluşturulan kaynağın kendi adresi değil).
     /// </summary>
     // Handler constructor'dan değil action parametresinden alınır: her istek yalnızca kendi handler'ını oluşturur.
     [HttpPost("register")]
     [AllowAnonymous]
+    [EnableRateLimiting(AuthRateLimiting.PolicyName)]
     [ProducesResponseType<AuthResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests)]
     public async Task<ActionResult<AuthResponse>> Register(
         RegisterRequest request, [FromServices] RegisterHandler handler, CancellationToken cancellationToken)
     {
@@ -36,10 +40,12 @@ public sealed class AuthController : ControllerBase
 
     /// <summary>
     /// E-posta ve parolayla giriş (L3, L4, L7). 200 + AuthResponse. Hatalar: 400 validation.failed (boş alan),
-    /// 401 auth.invalid_credentials (kayıtsız e-posta ve yanlış parola aynı), 429 auth.locked_out.
+    /// 401 auth.invalid_credentials (kayıtsız e-posta ve yanlış parola aynı), 429 auth.locked_out (hesap kilidi) ya da
+    /// system.rate_limited (IP limiti, register ile ortak).
     /// </summary>
     [HttpPost("login")]
     [AllowAnonymous]
+    [EnableRateLimiting(AuthRateLimiting.PolicyName)]
     [ProducesResponseType<AuthResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]

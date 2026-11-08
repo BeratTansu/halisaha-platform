@@ -40,3 +40,5 @@ DELETE FROM "AspNetUsers" WHERE "Email" LIKE 'newman+%@test.local';
 ```
 
 - 4. istek her çalıştırmada yeni kullanıcı için tek bir yanlış deneme yapar; hesap kilidine (5 deneme) ulaşmaz.
+- Register ve login IP başına dakikada 20 istekle sınırlı (ortak kota). Bir çalıştırma 4 istek harcar: bir dakika
+  içinde 5'ten fazla çalıştırırsan 429 `system.rate_limited` alırsın; `Retry-After` kadar bekle.
