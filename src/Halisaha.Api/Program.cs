@@ -71,6 +71,11 @@ builder.Services.AddControllers()
         // Model binding hataları (bozuk JSON, tanımsız enum metni) da aynı 400 biçiminde dönsün.
         options.InvalidModelStateResponseFactory = ModelBindingProblems.Create);
 
+// OpenAPI dokümanı da enum'ları adıyla ("Forward") göstersin: doküman üreticisi controller ayarını (AddJsonOptions) okumuyor.
+// Bu satır olmasaydı Scalar'da "preferredPosition": 1 gibi bir örnek görünür ve onu gönderen 400 hatası alırdı.
+builder.Services.ConfigureHttpJsonOptions(options =>
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false)));
+
 // OpenAPI dokümanı (/openapi/v1.json) + Bearer şeması: Scalar token yapıştırma alanını buradan bilir.
 builder.Services.AddOpenApi(options =>
 {
