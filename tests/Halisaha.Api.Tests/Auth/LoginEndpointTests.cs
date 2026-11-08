@@ -90,7 +90,10 @@ public sealed class LoginEndpointTests(ApiFixture fixture)
         var response = await LoginAsync(_client, email, WrongPassword);
 
         using var json = await AssertProblemAsync(response, HttpStatusCode.Unauthorized, "auth.invalid_credentials");
-        Assert.Equal("Bearer", Assert.Single(response.Headers.WwwAuthenticate).Scheme);
+        // İstekte token yok: RFC 6750 3.1'e göre yalnızca "Bearer", hata kodu yok (invalid_token değil).
+        var challenge = Assert.Single(response.Headers.WwwAuthenticate);
+        Assert.Equal("Bearer", challenge.Scheme);
+        Assert.Null(challenge.Parameter);
         Assert.False(json.RootElement.TryGetProperty("accessToken", out _));
     }
 

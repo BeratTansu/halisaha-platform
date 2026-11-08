@@ -1,6 +1,7 @@
 ﻿using FluentValidation;
 using Halisaha.Application.Commands.Login;
 using Halisaha.Application.Commands.Register;
+using Halisaha.Application.Queries.GetMe;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Halisaha.Application;
@@ -21,6 +22,8 @@ public static class DependencyInjection
 
         services.AddScoped<IValidator<LoginCommand>, LoginCommandValidator>();
         services.AddScoped<LoginHandler>();
+
+        services.AddScoped<GetMeHandler>();
 
         return services;
     }

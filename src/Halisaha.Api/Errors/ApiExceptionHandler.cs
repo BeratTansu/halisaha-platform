@@ -1,5 +1,7 @@
 ﻿using System.Text.Json;
 using FluentValidation;
+using Halisaha.Api.Authentication;
+using Halisaha.Application.Errors;
 using Halisaha.Domain.Common;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
@@ -27,7 +29,7 @@ internal sealed class ApiExceptionHandler(IProblemDetailsService problemDetails,
             ValidationException validation => ValidationProblem(validation),
             // Yalnızca bilinen türler kendi kodu ve mesajıyla döner. Bilinmeyen bir tür (enum'a eklenip burada
             // eşlenmemiş bir değer) bizim hatamızdır: mesajı ve kodu dışarı verilmez, genel 500 olur.
-            DomainException domain when StatusFor(domain.Kind) is { } status => DomainProblem(domain, status),
+            DomainException domain when StatusFor(domain.Kind) is { } status => ApiProblems.Domain(domain, status),
             _ => UnexpectedProblem(),
         };
 
@@ -44,11 +46,14 @@ internal sealed class ApiExceptionHandler(IProblemDetailsService problemDetails,
 
         httpContext.Response.StatusCode = details.Status!.Value;
 
-        // RFC 9110: 401 cevabı WWW-Authenticate taşımalı; istemciye hangi şemayla kimlik kanıtlayacağını söyler.
-        // Login'in 401'i de bu yoldan geçer (L3). Token'ın 401'i (JwtBearer challenge) sonraki dilimde.
+        // RFC 9110: 401 cevabı WWW-Authenticate taşımalı. Bu yoldan iki 401 gelir (değer: BearerChallenge):
+        // - auth.unauthenticated: token geçerliydi ama sahibi sistemde yok -> token reddedildi, invalid_token.
+        // - auth.invalid_credentials (login): istekte token yok -> yalnızca "Bearer".
+        // Token'ın kendisi geçersizse 401'i JwtBearer olayları yazar (JwtBearerProblemEvents), buraya gelmez.
         if (details.Status == StatusCodes.Status401Unauthorized)
         {
-            httpContext.Response.Headers.WWWAuthenticate = "Bearer";
+            var tokenWasRejected = exception is DomainException { Code: AuthErrors.UnauthenticatedCode };
+            httpContext.Response.Headers.WWWAuthenticate = BearerChallenge.HeaderValue(tokenWasRejected);
         }
 
         // Exception bilerek ProblemDetailsContext'e verilmez: gövdeye hiçbir koşulda exception bilgisi girmesin.
@@ -81,13 +86,6 @@ internal sealed class ApiExceptionHandler(IProblemDetailsService problemDetails,
         DomainErrorKind.TooManyRequests => StatusCodes.Status429TooManyRequests,
         _ => null,
     };
-
-    private static ProblemDetails DomainProblem(DomainException exception, int status)
-    {
-        var details = new ProblemDetails { Status = status, Detail = exception.Message };
-        details.Extensions["code"] = exception.Code;
-        return details;
-    }
 
     private static ProblemDetails UnexpectedProblem()
     {
