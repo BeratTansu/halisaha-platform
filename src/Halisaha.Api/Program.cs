@@ -90,11 +90,12 @@ app.UseExceptionHandler();
 
 // API haritası yalnızca Development'ta: production'da hangi endpoint'lerin olduğu dışarı açılmaz. Fallback policy
 // her endpoint'e giriş şartı koyduğu için ikisi de açıkça anonim işaretlenir (yoksa sayfa 401 verirdi).
-// Scalar arayüzü: /scalar (token'ı sağ üstteki Authentication alanına yapıştır).
+// Scalar arayüzü: /scalar. Bearer varsayılan seçili: token'ı Authentication alanına yapıştırmak yeter.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi().AllowAnonymous();
-    app.MapScalarApiReference().AllowAnonymous();
+    app.MapScalarApiReference(options => options.AddPreferredSecuritySchemes(BearerSecurityTransformer.SchemeName))
+        .AllowAnonymous();
 }
 
 app.UseHttpsRedirection();

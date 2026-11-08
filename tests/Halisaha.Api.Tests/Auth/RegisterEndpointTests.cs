@@ -240,7 +240,7 @@ public sealed class RegisterEndpointTests(ApiFixture fixture)
     {
         // MVC action argümanlarını Trace seviyesinde ToString ile loglar (LoginEndpointTests'teki log testi).
         var request = new Contracts.Auth.RegisterRequest(
-            "ahmet@example.com", "cok-gizli-parola-42", "Ahmet", "Yılmaz", "+90 555 123 45 67", Position.Forward, 3, 1);
+            "ahmet@example.com", "cok-gizli-parola-42", "Ahmet", "Yılmaz", Position.Forward, 3, 1, "+90 555 123 45 67");
 
         var text = request.ToString();
 

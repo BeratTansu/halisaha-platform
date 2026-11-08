@@ -68,6 +68,35 @@ public sealed class OpenApiTests
     }
 
     [Fact]
+    public async Task Document_ShowsPhoneNumberAsOptional_LikeTheApiTreatsIt()
+    {
+        // Telefon isteğe bağlı (validator boşa izin verir); diğer alanlar gerçekten zorunlu.
+        using var factory = Create("Development");
+        using var client = factory.CreateClient();
+
+        using var json = JsonDocument.Parse(await client.GetStringAsync(DocumentUrl));
+        var required = json.RootElement.GetProperty("components").GetProperty("schemas")
+            .GetProperty("RegisterRequest").GetProperty("required").EnumerateArray().Select(v => v.GetString()).ToList();
+
+        Assert.DoesNotContain("phoneNumber", required);
+        Assert.Equal(
+            ["email", "firstName", "lastName", "password", "preferredDistrictId", "preferredPosition", "skillLevel"],
+            required.Order());
+    }
+
+    [Fact]
+    public async Task Scalar_SelectsTheBearerSchemeByDefault()
+    {
+        // Kullanıcı her açılışta Auth tipini elle seçmek zorunda kalmasın: token'ı yapıştırmak yeter.
+        using var factory = Create("Development");
+        using var client = factory.CreateClient();
+
+        var html = await client.GetStringAsync(ScalarUrl);
+
+        Assert.Contains("\"preferredSecurityScheme\":[\"Bearer\"]", html);
+    }
+
+    [Fact]
     public async Task Development_ServesScalarAnonymously()
     {
         using var factory = Create("Development");

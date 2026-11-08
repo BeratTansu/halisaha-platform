@@ -76,8 +76,9 @@ public class RegisterHandlerTests
     [Fact]
     public async Task CommitFailure_CreatesNoToken()
     {
-        // Asıl sebep bu: token commit'ten önce üretilseydi, commit başarısız olduğunda (bağlantı koptu, yarışta
-        // unique index) kullanıcı kaydedilmemiş ama token üretilmiş olurdu.
+        // "Önce kalıcı yaz, sonra dışarı ver." Bugün access token yalnızca bellekte üretilir ve exception
+        // fırladığı için istemciye hiç ulaşmazdı; ama refresh token diliminde token veritabanına da yazılacak.
+        // O gün geri alınmış bir kaydın sahipsiz token'ı kalmamalı. Test bu sırayı şimdiden sabitler.
         var handler = new RegisterHandler(
             new RegisterCommandValidator(), _locations, _identity, _profiles,
             new ThrowingUnitOfWork(new InvalidOperationException("commit failed")), _tokens, new FixedTimeProvider(Now));

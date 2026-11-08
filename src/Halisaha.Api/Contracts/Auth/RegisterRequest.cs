@@ -9,16 +9,18 @@ namespace Halisaha.Api.Contracts.Auth;
 /// istemcinin gönderdiği alanlarla eşleşmelidir.
 /// Metin alanları nullable: HTTP'den her şey eksik gelebilir. Bu, MVC'nin non-nullable alanlara örtük
 /// [Required] eklemesini de engeller; böylece isteğin şeklini tek bir yer (FluentValidation) doğrular.
+/// PhoneNumber isteğe bağlı olduğu için sonda ve varsayılan değerli: OpenAPI dokümanı varsayılanı olmayan her
+/// parametreyi zorunlu gösterir (8 Kasım'da ölçüldü). JSON alanları adla eşlendiği için sıra istemciyi etkilemez.
 /// </summary>
 public sealed record RegisterRequest(
     string? Email,
     string? Password,
     string? FirstName,
     string? LastName,
-    string? PhoneNumber,
     Position PreferredPosition,
     int SkillLevel,
-    int PreferredDistrictId)
+    int PreferredDistrictId,
+    string? PhoneNumber = null)
 {
     // Command constructor parametreli: command'a eklenen yeni bir alan burada derleme hatası verir.
     // Eksik metinler boş string olur; validator "boş olamaz" der.
