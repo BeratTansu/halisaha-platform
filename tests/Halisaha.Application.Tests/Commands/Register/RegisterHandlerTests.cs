@@ -20,6 +20,7 @@ public class RegisterHandlerTests
     private readonly FakeIdentityService _identity;
     private readonly FakePlayerProfileRepository _profiles;
     private readonly FakeLocationQueries _locations;
+    private readonly FakeTokenService _tokens;
     private readonly RegisterHandler _handler;
 
     public RegisterHandlerTests()
@@ -28,8 +29,9 @@ public class RegisterHandlerTests
         _identity = new FakeIdentityService(_log, _unitOfWork);
         _profiles = new FakePlayerProfileRepository(_log, _unitOfWork);
         _locations = new FakeLocationQueries(_log, _unitOfWork);
+        _tokens = new FakeTokenService(_log);
         _handler = new RegisterHandler(
-            new RegisterCommandValidator(), _locations, _identity, _profiles, _unitOfWork, new FixedTimeProvider(Now));
+            new RegisterCommandValidator(), _locations, _identity, _profiles, _unitOfWork, _tokens, new FixedTimeProvider(Now));
     }
 
     [Fact]
@@ -44,7 +46,45 @@ public class RegisterHandlerTests
             "identity.create (in transaction)",
             "profiles.add (in transaction)",        // Identity başarılı olduktan sonra, aynı transaction'da
             "uow.commit",
+            "tokens.create",                        // L7: commit'ten SONRA, transaction dışında
         ], _log.Calls);
+    }
+
+    [Fact]
+    public async Task ValidCommand_ReturnsAnAccessTokenForTheNewUser()
+    {
+        // Otomatik giriş (Dilim 4): kayıt olan kullanıcı ayrıca login olmak zorunda kalmaz.
+        var result = await _handler.HandleAsync(RegisterCommands.Valid(), CancellationToken.None);
+
+        Assert.Equal(result.UserId, _tokens.ReceivedUserId);
+        Assert.Equal($"token-for-{result.UserId}", result.AccessToken.Value);
+        Assert.Equal(FakeTokenService.Lifetime, result.AccessToken.ExpiresIn);
+    }
+
+    [Fact]
+    public async Task EmailTaken_CreatesNoToken()
+    {
+        // Kayıt tamamlanmadıysa token da yok: var olmayan bir kullanıcının elinde geçerli bir token kalmaz.
+        _identity.Result = IdentityCreationResult.EmailTaken;
+
+        await Assert.ThrowsAsync<DomainException>(() => _handler.HandleAsync(RegisterCommands.Valid(), CancellationToken.None));
+
+        Assert.Null(_tokens.ReceivedUserId);
+        Assert.DoesNotContain("tokens.create", _log.Calls);
+    }
+
+    [Fact]
+    public async Task CommitFailure_CreatesNoToken()
+    {
+        // Asıl sebep bu: token commit'ten önce üretilseydi, commit başarısız olduğunda (bağlantı koptu, yarışta
+        // unique index) kullanıcı kaydedilmemiş ama token üretilmiş olurdu.
+        var handler = new RegisterHandler(
+            new RegisterCommandValidator(), _locations, _identity, _profiles,
+            new ThrowingUnitOfWork(new InvalidOperationException("commit failed")), _tokens, new FixedTimeProvider(Now));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => handler.HandleAsync(RegisterCommands.Valid(), CancellationToken.None));
+
+        Assert.Null(_tokens.ReceivedUserId);
     }
 
     [Fact]
@@ -176,7 +216,7 @@ public class RegisterHandlerTests
         var original = new InvalidOperationException("database unavailable");
         var handler = new RegisterHandler(
             new RegisterCommandValidator(), _locations, _identity, _profiles, new ThrowingUnitOfWork(original),
-            new FixedTimeProvider(Now));
+            _tokens, new FixedTimeProvider(Now));
 
         var thrown = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             handler.HandleAsync(RegisterCommands.Valid(), CancellationToken.None));
