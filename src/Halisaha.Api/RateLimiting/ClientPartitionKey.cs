@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Sockets;
 
 namespace Halisaha.Api.RateLimiting;
 
@@ -16,7 +17,28 @@ internal static class ClientPartitionKey
     /// </summary>
     public static string From(IPAddress? address)
     {
-        // TODO(Berat): Dilim 5. Şimdilik her istek aynı kovaya düşüyor; ClientPartitionKeyTests kırmızı.
-        return Unknown;
+        if (address == null)
+        {
+            return Unknown;
+        }
+
+        if (address.IsIPv4MappedToIPv6)
+        {
+            address = address.MapToIPv4();
+        }
+
+        if (address.AddressFamily == AddressFamily.InterNetwork)
+        {
+            return address.ToString();
+        }
+
+        var bytes = address.GetAddressBytes();
+
+        for (var i = 8; i < 16; i++)
+        {
+            bytes[i] = 0;
+        }
+
+        return new IPAddress(bytes) + "/64";
     }
 }
