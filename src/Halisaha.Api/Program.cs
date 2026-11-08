@@ -1,12 +1,14 @@
 using System.Text.Json.Serialization;
 using Halisaha.Api.Authentication;
 using Halisaha.Api.Errors;
+using Halisaha.Api.OpenApi;
 using Halisaha.Application;
 using Halisaha.Infrastructure;
 using Halisaha.Infrastructure.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -69,18 +71,25 @@ builder.Services.AddControllers()
         // Model binding hataları (bozuk JSON, tanımsız enum metni) da aynı 400 biçiminde dönsün.
         options.InvalidModelStateResponseFactory = ModelBindingProblems.Create);
 
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+// OpenAPI dokümanı (/openapi/v1.json) + Bearer şeması: Scalar token yapıştırma alanını buradan bilir.
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer<BearerSecurityTransformer>();
+    options.AddOperationTransformer<BearerSecurityTransformer>();
+});
 
 var app = builder.Build();
 
 // En başta: sonraki middleware'lerde ve controller'larda fırlayan her exception ApiExceptionHandler'a gelir.
 app.UseExceptionHandler();
 
-// Configure the HTTP request pipeline.
+// API haritası yalnızca Development'ta: production'da hangi endpoint'lerin olduğu dışarı açılmaz. Fallback policy
+// her endpoint'e giriş şartı koyduğu için ikisi de açıkça anonim işaretlenir (yoksa sayfa 401 verirdi).
+// Scalar arayüzü: /scalar (token'ı sağ üstteki Authentication alanına yapıştır).
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.MapOpenApi().AllowAnonymous();
+    app.MapScalarApiReference().AllowAnonymous();
 }
 
 app.UseHttpsRedirection();
