@@ -53,6 +53,21 @@ public sealed class OpenApiTests
     }
 
     [Fact]
+    public async Task Document_ShowsPositionAsNames_TheOnlyFormTheApiAccepts()
+    {
+        // API pozisyonu yalnızca adıyla kabul eder ("Forward"); sayı (1) gönderen 400 alır (RegisterEndpointTests).
+        // Doküman da aynısını söylemeli, yoksa Scalar ve Postman kullanıcısına çalışmayan bir örnek gösterir.
+        using var factory = Create("Development");
+        using var client = factory.CreateClient();
+
+        using var json = JsonDocument.Parse(await client.GetStringAsync(DocumentUrl));
+        var position = json.RootElement.GetProperty("components").GetProperty("schemas").GetProperty("Position");
+
+        Assert.True(position.TryGetProperty("enum", out var values), "Position should be documented as an enum of names.");
+        Assert.Equal(["Goalkeeper", "Defender", "Midfielder", "Forward"], values.EnumerateArray().Select(v => v.GetString()));
+    }
+
+    [Fact]
     public async Task Development_ServesScalarAnonymously()
     {
         using var factory = Create("Development");
